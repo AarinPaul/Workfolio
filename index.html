@@ -4,6 +4,48 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/macbook.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      If opened on a narrow/mobile screen, we try to emulate a desktop viewport
+      so the site renders in its desktop layout (best-effort). This cannot
+      actually toggle the browser "Request Desktop Site" setting — browsers
+      disallow forcing that — but changing the meta viewport often produces
+      the desired visual effect. The script stores the original content on the
+      meta (`data-original`) so the change is reversible.
+    -->
+    <script>
+      (function(){
+        try {
+          var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+          var ua = navigator.userAgent || '';
+          var isMobileUA = /Android|iPhone|iPad|iPod|Mobile|Opera Mini|IEMobile/i.test(ua);
+          // Only apply for likely mobile devices and narrow viewports
+          if (!isTouch && !isMobileUA) return;
+
+          var mw = window.innerWidth || document.documentElement.clientWidth;
+          // If already wide enough, do nothing
+          if (mw >= 900) return;
+
+          var meta = document.querySelector('meta[name=viewport]');
+          if (!meta) return;
+
+          // Keep original so it's reversible/debuggable
+          if (!meta.getAttribute('data-original')) {
+            meta.setAttribute('data-original', meta.getAttribute('content') || '');
+          }
+
+          // Choose a desktop width to emulate. 1024 is a reasonable default.
+          var desktopWidth = 1024;
+          // Compute scale so content fits the device width
+          var scale = Math.min(1, mw / desktopWidth);
+          // Compose new viewport value
+          var newContent = 'width=' + desktopWidth + ', initial-scale=' + scale + ', maximum-scale=1.0, user-scalable=yes';
+          meta.setAttribute('content', newContent);
+        } catch (e) {
+          // fail silently; do not break page load
+          console.warn('viewport desktop-emulation failed', e);
+        }
+      })();
+    </script>
     <title>Aarin's Portfolio</title>
   </head>
   <body>
