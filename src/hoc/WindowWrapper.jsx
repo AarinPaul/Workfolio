@@ -24,6 +24,16 @@ const WindowWrapper = (Component, windowKey) => {
                const el = ref.current;
                if(!el) return () => {};
 
+               // Avoid enabling Draggable on touch devices because it can
+               // capture touch events and prevent clicks/taps from reaching
+               // inner interactive elements (links, buttons).
+               try {
+                    var isTouch = (typeof window !== 'undefined') && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+                    if (isTouch) return () => {};
+               } catch (e) {
+                    // detection failure — continue with draggable as a fallback
+               }
+
                const [instance] = Draggable.create(el, { onPress: () => focusWindow(windowKey)});
 
                return () => instance.kill();

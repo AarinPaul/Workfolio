@@ -17,6 +17,16 @@ const Home = () => {
      }
 
      useGSAP(() => {
+          // Avoid initializing GSAP Draggable on touch devices because it can
+          // consume touch events and prevent normal clicks/taps from firing.
+          // On desktop (mouse) we keep the draggable behavior.
+          try {
+               var isTouch = (typeof window !== 'undefined') && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
+               if (isTouch) return;
+          } catch (e) {
+               // if detection fails, fall back to non-touch behavior
+          }
+
           Draggable.create(".folder");
      }, []);
 
