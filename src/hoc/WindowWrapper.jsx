@@ -41,6 +41,20 @@ const WindowWrapper = (Component, windowKey) => {
                     try { focusWindow(windowKey); } catch (err) { /* ignore */ }
                };
 
+                    // Elements inside the header that should not start a drag (links,
+                    // buttons, window controls). We'll stop propagation for their
+                    // pointer/touchstart so Draggable doesn't begin when interacting
+                    // with them.
+                    const nonDragSelector = '#window-controls, #window-header a, #window-header button, #window-header [data-no-drag], #window-header .close, #window-header .minimize, #window-header .maximize';
+                    const nonDragElements = Array.from(el.querySelectorAll(nonDragSelector));
+                    const stopPropagation = (ev) => ev.stopPropagation();
+                    nonDragElements.forEach((node) => {
+                         try {
+                              node.addEventListener('pointerdown', stopPropagation);
+                              node.addEventListener('touchstart', stopPropagation);
+                         } catch (e) {}
+                    });
+
                const onDragStart = () => {
                     try {
                          document.body.classList.add('is-dragging');
@@ -89,6 +103,13 @@ const WindowWrapper = (Component, windowKey) => {
                     try {
                          document.removeEventListener('touchmove', preventTouchMove);
                     } catch (e) {}
+                    // Cleanup non-drag listeners
+                    nonDragElements.forEach((node) => {
+                         try {
+                              node.removeEventListener('pointerdown', stopPropagation);
+                              node.removeEventListener('touchstart', stopPropagation);
+                         } catch (e) {}
+                    });
                };
           }, []);
 
