@@ -24,19 +24,72 @@ const WindowWrapper = (Component, windowKey) => {
                const el = ref.current;
                if(!el) return () => {};
 
-               // Avoid enabling Draggable on touch devices because it can
-               // capture touch events and prevent clicks/taps from reaching
-               // inner interactive elements (links, buttons).
-               try {
-                    var isTouch = (typeof window !== 'undefined') && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
-                    if (isTouch) return () => {};
-               } catch (e) {
-                    // detection failure — continue with draggable as a fallback
-               }
+               // Use the window header as the drag handle so inner interactive
+               // elements (links/buttons) remain tappable. `#window-header` is
+               // used across window components as the header element.
+               const handle = el.querySelector('#window-header') || el;
 
-               const [instance] = Draggable.create(el, { onPress: () => focusWindow(windowKey)});
+               // Prevent page scrolling while dragging on touch devices by
+               // blocking `touchmove` during an active drag. This listener is
+               // added on drag start and removed on drag end/release.
+               const preventTouchMove = (e) => {
+                    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+                    return false;
+               };
 
-               return () => instance.kill();
+               const onPress = () => {
+                    try { focusWindow(windowKey); } catch (err) { /* ignore */ }
+               };
+
+               const onDragStart = () => {
+                    try {
+                         document.body.classList.add('is-dragging');
+                         document.addEventListener('touchmove', preventTouchMove, { passive: false });
+                    } catch (e) {
+                         // ignore
+                    }
+               };
+
+               const onRelease = () => {
+                    try {
+                         document.body.classList.remove('is-dragging');
+                         document.removeEventListener('touchmove', preventTouchMove, { passive: false });
+                         // Some browsers don't accept the options object when removing
+                         // the listener; try again without options as fallback.
+                         document.removeEventListener('touchmove', preventTouchMove);
+                    } catch (e) {
+                         // ignore
+                    }
+               };
+
+               // Create draggable with a handle and basic options. Using a handle
+               // keeps clicks/taps inside the window content functional. Use the
+               // header as the trigger when it exists so events in content are
+               // not captured by Draggable.
+               const triggerEl = (handle && handle !== el) ? handle : el;
+
+               const instances = Draggable.create(el, {
+                    type: 'x,y',
+                    edgeResistance: 0.65,
+                    bounds: document.body,
+                    trigger: triggerEl,
+                    handle: handle,
+                    onPress: onPress,
+                    onDragStart: onDragStart,
+                    onRelease: onRelease,
+                    onDragEnd: onRelease,
+               });
+
+               const instance = instances && instances[0];
+
+               return () => {
+                    try {
+                         if (instance && typeof instance.kill === 'function') instance.kill();
+                    } catch (e) {}
+                    try {
+                         document.removeEventListener('touchmove', preventTouchMove);
+                    } catch (e) {}
+               };
           }, []);
 
           useLayoutEffect(() => {
